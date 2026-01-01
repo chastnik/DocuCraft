@@ -29,3 +29,8 @@ pygithub>=1.59.0
 openai>=1.3.0
 anthropic>=0.7.0
 
+# File Upload & Export
+aiofiles>=23.2.0
+markdown>=3.5.0
+weasyprint>=60.0  # Optional: for PDF export
+

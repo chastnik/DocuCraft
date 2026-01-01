@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuCraft - Документ</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        .document-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .editor-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .editor-textarea {
+            flex: 1;
+            min-height: 600px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .preview-panel {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 800px;
+        }
+
+        .preview-content {
+            line-height: 1.8;
+        }
+
+        .preview-content h1,
+        .preview-content h2,
+        .preview-content h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .preview-content h1 { font-size: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        .preview-content h2 { font-size: 1.5rem; }
+        .preview-content h3 { font-size: 1.25rem; }
+
+        .preview-content p {
+            margin-bottom: 1rem;
+        }
+
+        .preview-content code {
+            background-color: var(--bg-tertiary);
+            padding: 0.2rem 0.4rem;
+            border-radius: var(--radius-sm);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875em;
+        }
+
+        .preview-content pre {
+            background-color: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .preview-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .preview-content blockquote {
+            border-left: 4px solid var(--accent-color);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--text-secondary);
+        }
+
+        .preview-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .preview-content table th,
+        .preview-content table td {
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+        }
+
+        .preview-content table th {
+            background-color: var(--bg-tertiary);
+            font-weight: 600;
+        }
+
+        .preview-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius-md);
+            margin: 1rem 0;
+        }
+
+        .preview-content a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .preview-content a:hover {
+            text-decoration: underline;
+        }
+
+        .view-mode .editor-container {
+            grid-template-columns: 1fr;
+        }
+
+        .view-mode .editor-panel {
+            display: none;
+        }
+
+        .mermaid {
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .save-indicator {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: none;
+        }
+
+        .save-indicator.show {
+            display: block;
+        }
+
+        .save-indicator.saving {
+            color: var(--warning-color);
+        }
+
+        .save-indicator.saved {
+            color: var(--success-color);
+        }
+
+        .save-indicator.error {
+            color: var(--error-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/dashboard.html" class="navbar-brand">
+                📚 DocuCraft
+            </a>
+            <div class="navbar-actions">
+                <button class="btn-icon" onclick="themeManager.toggle(); location.reload();" title="Переключить тему">
+                    🌓
+                </button>
+                <span id="userName" class="text-secondary"></span>
+                <button class="btn btn-secondary" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="documentHeader" class="project-header">
+            <div class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 0.5rem;">Загрузка...</span>
+            </div>
+        </div>
+
+        <div class="document-toolbar">
+            <div>
+                <button class="btn btn-secondary" onclick="toggleViewMode()" id="viewModeBtn">
+                    👁️ Режим просмотра
+                </button>
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn btn-secondary" onclick="goBack()">← Назад</button>
+                <button class="btn btn-primary" onclick="saveDocument()" id="saveBtn">💾 Сохранить</button>
+            </div>
+        </div>
+
+        <div class="editor-container" id="editorContainer">
+            <div class="editor-panel">
+                <div class="editor-header">
+                    <span>Редактор Markdown</span>
+                </div>
+                <textarea id="editor" class="form-textarea editor-textarea" 
+                          placeholder="Начните писать документацию в формате Markdown..."></textarea>
+            </div>
+            <div class="preview-panel">
+                <div class="editor-header">
+                    <span>Предпросмотр</span>
+                </div>
+                <div id="preview" class="preview-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveIndicator" class="save-indicator"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const documentId = urlParams.get('id');
+
+        if (!documentId) {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Check authentication
+        if (!api.token) {
+            window.location.href = '/';
+        }
+
+        // Load user info
+        api.getCurrentUser().then(user => {
+            document.getElementById('userName').textContent = user.username || user.email;
+        }).catch(() => {
+            window.location.href = '/';
+        });
+
+        let documentData = null;
+        let isViewMode = false;
+        let saveTimeout = null;
+        let isSaving = false;
+
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: themeManager.getTheme() === 'dark' ? 'dark' : 'default',
+            securityLevel: 'loose'
+        });
+
+        // Configure Marked
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            highlight: function(code, lang) {
+                // Simple code highlighting - можно добавить highlight.js
+                return code;
+            }
+        });
+
+        // Load document
+        async function loadDocument() {
+            try {
+                documentData = await api.getDocument(documentId);
+                const header = document.getElementById('documentHeader');
+                header.innerHTML = `
+                    <div class="project-title">${escapeHtml(documentData.title)}</div>
+                    <div class="project-description">
+                        <span class="text-muted">Создан: ${new Date(documentData.created_at).toLocaleString('ru-RU')}</span>
+                        ${documentData.updated_at !== documentData.created_at ? 
+                            `<span class="text-muted"> | Обновлен: ${new Date(documentData.updated_at).toLocaleString('ru-RU')}</span>` : ''}
+                    </div>
+                `;
+
+                const content = documentData.content || '';
+                document.getElementById('editor').value = content;
+                updatePreview(content);
+            } catch (error) {
+                console.error('Failed to load document:', error);
+                alert('Ошибка загрузки документа: ' + error.message);
+                goBack();
+            }
+        }
+
+        // Update preview
+        function updatePreview(content) {
+            const preview = document.getElementById('preview');
+            
+            // Process Mermaid diagrams
+            const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/g;
+            const mermaidDiagrams = [];
+            let mermaidIndex = 0;
+            
+            content = content.replace(mermaidRegex, (match, diagram) => {
+                const id = `mermaid-${mermaidIndex++}`;
+                mermaidDiagrams.push({ id, diagram });
+                return `<div class="mermaid" id="${id}">${diagram}</div>`;
+            });
+
+            // Convert Markdown to HTML
+            const html = marked.parse(content);
+            preview.innerHTML = html;
+
+            // Render Mermaid diagrams
+            mermaidDiagrams.forEach(({ id, diagram }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    mermaid.render(id + '-svg', diagram).then(result => {
+                        element.innerHTML = result.svg;
+                    }).catch(err => {
+                        element.innerHTML = `<p style="color: var(--error-color);">Ошибка рендеринга диаграммы: ${err.message}</p>`;
+                    });
+                }
+            });
+        }
+
+        // Editor event listener
+        document.getElementById('editor').addEventListener('input', (e) => {
+            const content = e.target.value;
+            updatePreview(content);
+            
+            // Auto-save after 2 seconds of inactivity
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                autoSave();
+            }, 2000);
+        });
+
+        // Auto-save
+        async function autoSave() {
+            if (isSaving) return;
+            
+            const content = document.getElementById('editor').value;
+            if (content === documentData?.content) return;
+
+            isSaving = true;
+            showSaveIndicator('Сохранение...', 'saving');
+
+            try {
+                await api.updateDocument(documentId, {
+                    content: content,
+                });
+                documentData.content = content;
+                showSaveIndicator('Сохранено', 'saved');
+                setTimeout(() => hideSaveIndicator(), 2000);
+            } catch (error) {
+                showSaveIndicator('Ошибка сохранения', 'error');
+                setTimeout(() => hideSaveIndicator(), 3000);
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        // Manual save
+        async function saveDocument() {
+            const content = document.getElementById('editor').value;
+            
+            showSaveIndicator('Сохранение...', 'saving');
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+
+            try {
+                await api.updateDocument(documentId, {
+                    content: content,
+                });
+                documentData.content = content;
+                showSaveIndicator('Сохранено', 'saved');
+                setTimeout(() => hideSaveIndicator(), 2000);
+            } catch (error) {
+                showSaveIndicator('Ошибка сохранения: ' + error.message, 'error');
+                setTimeout(() => hideSaveIndicator(), 3000);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        }
+
+        function showSaveIndicator(text, className) {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.textContent = text;
+            indicator.className = `save-indicator show ${className}`;
+        }
+
+        function hideSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.remove('show');
+        }
+
+        function toggleViewMode() {
+            isViewMode = !isViewMode;
+            const container = document.getElementById('editorContainer');
+            const btn = document.getElementById('viewModeBtn');
+            
+            if (isViewMode) {
+                container.classList.add('view-mode');
+                btn.textContent = '✏️ Режим редактирования';
+            } else {
+                container.classList.remove('view-mode');
+                btn.textContent = '👁️ Режим просмотра';
+            }
+        }
+
+        function goBack() {
+            if (documentData?.project_id) {
+                window.location.href = `/project.html?id=${documentData.project_id}`;
+            } else {
+                window.location.href = '/dashboard.html';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        loadDocument();
+    </script>
+</body>
+</html>
+

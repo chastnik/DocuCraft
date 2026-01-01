@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuCraft - Проект</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        .project-header {
+            margin-bottom: 2rem;
+        }
+
+        .project-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .project-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .documents-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .document-card {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .document-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .document-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .document-preview {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .document-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/dashboard.html" class="navbar-brand">
+                📚 DocuCraft
+            </a>
+            <div class="navbar-actions">
+                <button class="btn-icon" onclick="themeManager.toggle(); location.reload();" title="Переключить тему">
+                    🌓
+                </button>
+                <span id="userName" class="text-secondary"></span>
+                <button class="btn btn-secondary" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="projectHeader" class="project-header">
+            <div class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 0.5rem;">Загрузка...</span>
+            </div>
+        </div>
+
+        <div class="documents-header">
+            <h2>Документы</h2>
+            <button class="btn btn-primary" onclick="openCreateDocumentModal()">
+                ➕ Создать документ
+            </button>
+        </div>
+
+        <div id="documentsContainer" class="grid grid-2">
+            <div class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 0.5rem;">Загрузка документов...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Document Modal -->
+    <div id="createDocumentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Создать документ</h2>
+                <button class="modal-close" onclick="closeCreateDocumentModal()">&times;</button>
+            </div>
+            <form id="createDocumentForm" onsubmit="handleCreateDocument(event)">
+                <div class="form-group">
+                    <label class="form-label" for="documentTitle">Название документа</label>
+                    <input type="text" id="documentTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="documentSlug">URL slug (опционально)</label>
+                    <input type="text" id="documentSlug" class="form-input" placeholder="auto-generated">
+                    <small class="text-muted">Будет автоматически сгенерирован из названия, если не указан</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateDocumentModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+
+        if (!projectId) {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Check authentication
+        if (!api.token) {
+            window.location.href = '/';
+        }
+
+        // Load user info
+        api.getCurrentUser().then(user => {
+            document.getElementById('userName').textContent = user.username || user.email;
+        }).catch(() => {
+            window.location.href = '/';
+        });
+
+        // Load project
+        async function loadProject() {
+            try {
+                const project = await api.getProject(projectId);
+                const header = document.getElementById('projectHeader');
+                header.innerHTML = `
+                    <div class="project-title">${escapeHtml(project.name)}</div>
+                    <div class="project-description">${escapeHtml(project.description || 'Нет описания')}</div>
+                    <div class="project-actions">
+                        <a href="/project-settings.html?id=${project.id}" class="btn btn-secondary">⚙️ Настройки</a>
+                        <a href="/dashboard.html" class="btn btn-secondary">← Назад к проектам</a>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Failed to load project:', error);
+                document.getElementById('projectHeader').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Ошибка загрузки проекта</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load documents
+        async function loadDocuments() {
+            try {
+                const documents = await api.getDocuments(projectId);
+                const container = document.getElementById('documentsContainer');
+                
+                if (documents.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">📄</div>
+                            <h3>Нет документов</h3>
+                            <p>Создайте первый документ для начала работы</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = documents.map(doc => `
+                    <div class="card document-card" onclick="openDocument('${doc.id}')">
+                        <div class="document-title">${escapeHtml(doc.title)}</div>
+                        <div class="document-preview">${escapeHtml(doc.content?.substring(0, 200) || 'Нет содержимого')}...</div>
+                        <div class="document-meta">
+                            <span>📅 ${new Date(doc.created_at).toLocaleDateString('ru-RU')}</span>
+                            <span class="badge badge-primary">${doc.slug || 'no-slug'}</span>
+                        </div>
+                        <div class="document-actions" onclick="event.stopPropagation();" style="margin-top: 1rem;">
+                            <button class="btn-icon" onclick="deleteDocument('${doc.id}')" title="Удалить">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load documents:', error);
+                document.getElementById('documentsContainer').innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Ошибка загрузки</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function openDocument(documentId) {
+            window.location.href = `/document.html?id=${documentId}`;
+        }
+
+        function openCreateDocumentModal() {
+            document.getElementById('createDocumentModal').classList.add('active');
+        }
+
+        function closeCreateDocumentModal() {
+            document.getElementById('createDocumentModal').classList.remove('active');
+            document.getElementById('createDocumentForm').reset();
+        }
+
+        async function handleCreateDocument(event) {
+            event.preventDefault();
+            const form = event.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Создание...';
+
+            try {
+                const title = document.getElementById('documentTitle').value;
+                const slug = document.getElementById('documentSlug').value || 
+                    title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                
+                const data = {
+                    project_id: projectId,
+                    title: title,
+                    slug: slug,
+                    content: '# Новый документ\n\nНачните писать документацию здесь...',
+                };
+                
+                const doc = await api.createDocument(projectId, data);
+                closeCreateDocumentModal();
+                openDocument(document.id);
+            } catch (error) {
+                alert('Ошибка создания документа: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        async function deleteDocument(documentId) {
+            if (!confirm('Вы уверены, что хотите удалить этот документ?')) {
+                return;
+            }
+
+            try {
+                await api.deleteDocument(documentId);
+                loadDocuments();
+            } catch (error) {
+                alert('Ошибка удаления документа: ' + error.message);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        loadProject();
+        loadDocuments();
+    </script>
+</body>
+</html>
+

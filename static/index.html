@@ -391,8 +391,8 @@
                 if (response.ok) {
                     // Save token
                     localStorage.setItem('access_token', data.access_token);
-                    // Redirect to dashboard (or API docs for now)
-                    window.location.href = '/docs';
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard.html';
                 } else {
                     showError('loginPassword', data.detail || 'Неверный email или пароль');
                 }
@@ -649,7 +649,7 @@
 
         // Check if user is already logged in
         if (localStorage.getItem('access_token')) {
-            window.location.href = '/docs';
+            window.location.href = '/dashboard.html';
         }
 
         // Initialize when DOM is ready

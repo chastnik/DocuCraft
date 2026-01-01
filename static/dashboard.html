@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuCraft - Проекты</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        .projects-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .project-card {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .project-card-header {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .project-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .project-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Modal styles are in common.css */
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/dashboard.html" class="navbar-brand">
+                📚 DocuCraft
+            </a>
+            <div class="navbar-actions">
+                <button class="btn-icon" onclick="themeManager.toggle(); location.reload();" title="Переключить тему">
+                    🌓
+                </button>
+                <span id="userName" class="text-secondary"></span>
+                <button class="btn btn-secondary" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="projects-header">
+            <div>
+                <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Проекты</h1>
+                <p class="text-muted">Управляйте документацией ваших проектов</p>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateProjectModal()">
+                ➕ Создать проект
+            </button>
+        </div>
+
+        <div id="projectsContainer" class="grid grid-2">
+            <div class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 0.5rem;">Загрузка проектов...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div id="createProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Создать проект</h2>
+                <button class="modal-close" onclick="closeCreateProjectModal()">&times;</button>
+            </div>
+            <form id="createProjectForm" onsubmit="handleCreateProject(event)">
+                <div class="form-group">
+                    <label class="form-label" for="projectName">Название проекта</label>
+                    <input type="text" id="projectName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="projectDescription">Описание</label>
+                    <textarea id="projectDescription" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="githubRepoUrl">GitHub репозиторий (опционально)</label>
+                    <input type="url" id="githubRepoUrl" class="form-input" placeholder="https://github.com/owner/repo">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="aiMode">Режим работы AI</label>
+                    <select id="aiMode" class="form-select">
+                        <option value="suggest-only">Только предложения</option>
+                        <option value="auto-apply">Автоматическое применение</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateProjectModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script>
+        // Check authentication
+        if (!api.token) {
+            window.location.href = '/';
+        }
+
+        // Load user info
+        api.getCurrentUser().then(user => {
+            document.getElementById('userName').textContent = user.username || user.email;
+        }).catch(() => {
+            window.location.href = '/';
+        });
+
+        // Load projects
+        async function loadProjects() {
+            try {
+                const projects = await api.getProjects();
+                const container = document.getElementById('projectsContainer');
+                
+                if (projects.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">📁</div>
+                            <h3>Нет проектов</h3>
+                            <p>Создайте первый проект для начала работы</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = projects.map(project => `
+                    <div class="card project-card" onclick="openProject('${project.id}')">
+                        <div class="project-card-header">
+                            <div style="flex: 1;">
+                                <div class="project-title">${escapeHtml(project.name)}</div>
+                                <div class="project-description">${escapeHtml(project.description || 'Нет описания')}</div>
+                            </div>
+                            <div class="project-actions" onclick="event.stopPropagation();">
+                                <button class="btn-icon" onclick="editProject('${project.id}')" title="Редактировать">✏️</button>
+                                <button class="btn-icon" onclick="deleteProject('${project.id}')" title="Удалить">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="project-meta">
+                            ${project.github_repo_url ? `<span>🔗 ${escapeHtml(project.github_repo_url)}</span>` : ''}
+                            <span class="badge badge-primary">${project.ai_mode || 'suggest-only'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load projects:', error);
+                document.getElementById('projectsContainer').innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Ошибка загрузки</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function openProject(projectId) {
+            window.location.href = `/project.html?id=${projectId}`;
+        }
+
+        function openCreateProjectModal() {
+            document.getElementById('createProjectModal').classList.add('active');
+        }
+
+        function closeCreateProjectModal() {
+            document.getElementById('createProjectModal').classList.remove('active');
+            document.getElementById('createProjectForm').reset();
+        }
+
+        async function handleCreateProject(event) {
+            event.preventDefault();
+            const form = event.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Создание...';
+
+            try {
+                const data = {
+                    name: document.getElementById('projectName').value,
+                    description: document.getElementById('projectDescription').value,
+                    github_repo_url: document.getElementById('githubRepoUrl').value || null,
+                    ai_mode: document.getElementById('aiMode').value,
+                };
+                
+                await api.createProject(data);
+                closeCreateProjectModal();
+                loadProjects();
+            } catch (error) {
+                alert('Ошибка создания проекта: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        async function deleteProject(projectId) {
+            if (!confirm('Вы уверены, что хотите удалить этот проект?')) {
+                return;
+            }
+
+            try {
+                await api.deleteProject(projectId);
+                loadProjects();
+            } catch (error) {
+                alert('Ошибка удаления проекта: ' + error.message);
+            }
+        }
+
+        function editProject(projectId) {
+            window.location.href = `/project-settings.html?id=${projectId}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        loadProjects();
+    </script>
+</body>
+</html>
+

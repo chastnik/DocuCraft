@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuCraft - Настройки проекта</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        .settings-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .members-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .member-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .member-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .member-email {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .member-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .role-select {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/dashboard.html" class="navbar-brand">
+                📚 DocuCraft
+            </a>
+            <div class="navbar-actions">
+                <button class="btn-icon" onclick="themeManager.toggle(); location.reload();" title="Переключить тему">
+                    🌓
+                </button>
+                <span id="userName" class="text-secondary"></span>
+                <button class="btn btn-secondary" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="projectHeader" class="project-header">
+            <div class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 0.5rem;">Загрузка...</span>
+            </div>
+        </div>
+
+        <div class="settings-tabs">
+            <button class="tab active" onclick="switchTab('general')">Общие</button>
+            <button class="tab" onclick="switchTab('members')">Участники</button>
+            <button class="tab" onclick="switchTab('git')">Git интеграция</button>
+        </div>
+
+        <!-- General Settings -->
+        <div id="generalTab" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Настройки проекта</h3>
+                </div>
+                <form id="projectSettingsForm" onsubmit="handleUpdateProject(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="projectName">Название проекта</label>
+                        <input type="text" id="projectName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="projectDescription">Описание</label>
+                        <textarea id="projectDescription" class="form-textarea" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="githubRepoUrl">GitHub репозиторий</label>
+                        <input type="url" id="githubRepoUrl" class="form-input" placeholder="https://github.com/owner/repo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="aiMode">Режим работы AI</label>
+                        <select id="aiMode" class="form-select">
+                            <option value="suggest-only">Только предложения</option>
+                            <option value="auto-apply">Автоматическое применение</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Members Settings -->
+        <div id="membersTab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Участники проекта</h3>
+                    <button class="btn btn-primary" onclick="openAddMemberModal()">➕ Добавить участника</button>
+                </div>
+                <div id="membersList" class="members-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span style="margin-left: 0.5rem;">Загрузка участников...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Git Settings -->
+        <div id="gitTab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Git интеграция</h3>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Webhook URL</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="webhookUrl" class="form-input" readonly>
+                        <button class="btn btn-secondary" onclick="copyWebhookUrl()">📋 Копировать</button>
+                    </div>
+                    <small class="text-muted">Используйте этот URL для настройки webhook в вашем Git репозитории</small>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-primary" onclick="testGitConnection()">🔗 Проверить подключение</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="addMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Добавить участника</h2>
+                <button class="modal-close" onclick="closeAddMemberModal()">&times;</button>
+            </div>
+            <form id="addMemberForm" onsubmit="handleAddMember(event)">
+                <div class="form-group">
+                    <label class="form-label" for="memberEmail">Email пользователя</label>
+                    <input type="email" id="memberEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="memberRole">Роль</label>
+                    <select id="memberRole" class="form-select">
+                        <option value="Viewer">Viewer - Только просмотр</option>
+                        <option value="Editor">Editor - Редактирование</option>
+                        <option value="ProjectLead">ProjectLead - Руководитель проекта</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddMemberModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+
+        if (!projectId) {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Check authentication
+        if (!api.token) {
+            window.location.href = '/';
+        }
+
+        let projectData = null;
+
+        // Load user info
+        api.getCurrentUser().then(user => {
+            document.getElementById('userName').textContent = user.username || user.email;
+        }).catch(() => {
+            window.location.href = '/';
+        });
+
+        // Load project
+        async function loadProject() {
+            try {
+                projectData = await api.getProject(projectId);
+                const header = document.getElementById('projectHeader');
+                header.innerHTML = `
+                    <div class="project-title">Настройки: ${escapeHtml(projectData.name)}</div>
+                    <div class="project-actions" style="margin-top: 1rem;">
+                        <a href="/project.html?id=${projectData.id}" class="btn btn-secondary">← Назад к проекту</a>
+                    </div>
+                `;
+
+                // Fill form
+                document.getElementById('projectName').value = projectData.name || '';
+                document.getElementById('projectDescription').value = projectData.description || '';
+                document.getElementById('githubRepoUrl').value = projectData.github_repo_url || '';
+                document.getElementById('aiMode').value = projectData.ai_mode || 'suggest-only';
+                document.getElementById('webhookUrl').value = `${window.location.origin}/api/v1/git/webhook/${projectId}`;
+            } catch (error) {
+                console.error('Failed to load project:', error);
+                alert('Ошибка загрузки проекта: ' + error.message);
+                goBack();
+            }
+        }
+
+        // Load members
+        async function loadMembers() {
+            try {
+                const members = await api.getProjectMembers(projectId);
+                const container = document.getElementById('membersList');
+                
+                if (members.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👥</div>
+                            <h3>Нет участников</h3>
+                            <p>Добавьте участников в проект</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = members.map(member => `
+                    <div class="member-item">
+                        <div class="member-info">
+                            <div class="member-avatar">
+                                ${(member.username || member.email || 'U')[0].toUpperCase()}
+                            </div>
+                            <div class="member-details">
+                                <div class="member-name">${escapeHtml(member.username || 'Без имени')}</div>
+                                <div class="member-email">${escapeHtml(member.email)}</div>
+                            </div>
+                        </div>
+                        <div class="member-actions">
+                            <select class="role-select" onchange="updateMemberRole('${member.user_id}', this.value)">
+                                <option value="Viewer" ${member.role === 'Viewer' ? 'selected' : ''}>Viewer</option>
+                                <option value="Editor" ${member.role === 'Editor' ? 'selected' : ''}>Editor</option>
+                                <option value="ProjectLead" ${member.role === 'ProjectLead' ? 'selected' : ''}>ProjectLead</option>
+                            </select>
+                            <button class="btn btn-danger" onclick="removeMember('${member.user_id}')">Удалить</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load members:', error);
+                document.getElementById('membersList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Ошибка загрузки</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Load data for members tab
+            if (tabName === 'members') {
+                loadMembers();
+            }
+        }
+
+        async function handleUpdateProject(event) {
+            event.preventDefault();
+            const form = event.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Сохранение...';
+
+            try {
+                const data = {
+                    name: document.getElementById('projectName').value,
+                    description: document.getElementById('projectDescription').value,
+                    github_repo_url: document.getElementById('githubRepoUrl').value || null,
+                    ai_mode: document.getElementById('aiMode').value,
+                };
+                
+                await api.updateProject(projectId, data);
+                projectData = await api.getProject(projectId);
+                alert('Настройки сохранены');
+            } catch (error) {
+                alert('Ошибка сохранения: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        function openAddMemberModal() {
+            document.getElementById('addMemberModal').classList.add('active');
+        }
+
+        function closeAddMemberModal() {
+            document.getElementById('addMemberModal').classList.remove('active');
+            document.getElementById('addMemberForm').reset();
+        }
+
+        async function handleAddMember(event) {
+            event.preventDefault();
+            // Note: This requires a user lookup by email API endpoint
+            // For now, we'll show an error
+            alert('Функция добавления участников по email требует дополнительного API endpoint. Пожалуйста, используйте ID пользователя.');
+            closeAddMemberModal();
+        }
+
+        async function updateMemberRole(userId, role) {
+            try {
+                await api.updateProjectMember(projectId, userId, role);
+                loadMembers();
+            } catch (error) {
+                alert('Ошибка обновления роли: ' + error.message);
+                loadMembers(); // Reload to reset
+            }
+        }
+
+        async function removeMember(userId) {
+            if (!confirm('Вы уверены, что хотите удалить этого участника?')) {
+                return;
+            }
+
+            try {
+                await api.removeProjectMember(projectId, userId);
+                loadMembers();
+            } catch (error) {
+                alert('Ошибка удаления участника: ' + error.message);
+            }
+        }
+
+        function copyWebhookUrl() {
+            const url = document.getElementById('webhookUrl');
+            url.select();
+            document.execCommand('copy');
+            alert('Webhook URL скопирован в буфер обмена');
+        }
+
+        function testGitConnection() {
+            alert('Проверка подключения к Git репозиторию...');
+            // TODO: Implement Git connection test
+        }
+
+        function goBack() {
+            window.location.href = `/project.html?id=${projectId}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        loadProject();
+    </script>
+</body>
+</html>
+
