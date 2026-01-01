@@ -30,7 +30,7 @@ async def get_ai_service(
     """Get AI service."""
     from app.domain.services.ai_service import AIService
 
-    ai_provider = get_ai_provider()
+    ai_provider = await get_ai_provider(db)
     return AIService(ai_provider, document_repo, project_repo, db)
 
 

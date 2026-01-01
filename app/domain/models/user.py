@@ -14,7 +14,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """User creation model."""
 
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=72, description="Password (8-72 bytes, bcrypt limitation)")
 
 
 class UserUpdate(BaseModel):

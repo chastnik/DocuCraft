@@ -9,11 +9,12 @@ from app.core.config import settings
 class AnthropicProvider(AIProvider):
     """Anthropic provider implementation."""
 
-    def __init__(self):
+    def __init__(self, api_key: str | None = None):
         """Initialize Anthropic provider."""
-        if not settings.anthropic_api_key:
+        api_key = api_key or settings.anthropic_api_key
+        if not api_key:
             raise ValueError("Anthropic API key not configured")
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.client = AsyncAnthropic(api_key=api_key)
         self.model = "claude-3-opus-20240229"
 
     async def analyze_code_changes(

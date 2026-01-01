@@ -6,6 +6,7 @@ from app.infrastructure.database.models.document import Document, DocumentVersio
 from app.infrastructure.database.models.git_event import GitEvent
 from app.infrastructure.database.models.ai_suggestion import AISuggestion
 from app.infrastructure.database.models.openapi_spec import OpenAPISpec
+from app.infrastructure.database.models.ai_configuration import AIConfiguration
 
 __all__ = [
     "User",
@@ -16,5 +17,6 @@ __all__ = [
     "GitEvent",
     "AISuggestion",
     "OpenAPISpec",
+    "AIConfiguration",
 ]
 

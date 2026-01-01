@@ -20,12 +20,17 @@ class UserRepository(BaseRepository[User]):
         pass
 
     @abstractmethod
-    async def create(self, user_data: UserCreate, hashed_password: str) -> User:
+    async def create(self, user_data: UserCreate, hashed_password: str, is_superuser: bool = False) -> User:
         """Create user."""
         pass
 
     @abstractmethod
     async def update(self, user_id: str, user_data: UserUpdate) -> User:
         """Update user."""
+        pass
+
+    @abstractmethod
+    async def count(self) -> int:
+        """Count total number of users."""
         pass
 

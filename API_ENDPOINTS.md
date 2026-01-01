@@ -314,3 +314,88 @@ WebSocket соединение для realtime редактирования до
 - Удаление участников
 - Изменение настроек проекта
 
+## Администрирование (Superuser only)
+
+Все endpoints в этом разделе требуют прав суперпользователя (is_superuser = true).
+
+### GET /api/v1/admin/ai-config
+Получение списка всех конфигураций AI провайдеров.
+
+**Headers:**
+- Authorization: Bearer {token} (требуется superuser)
+
+**Response:**
+```json
+[
+  {
+    "id": "config_uuid",
+    "provider": "openai",
+    "is_active": true,
+    "created_at": "2024-01-16T00:00:00Z",
+    "updated_at": "2024-01-16T00:00:00Z",
+    "api_key_masked": "***abcd"
+  }
+]
+```
+
+### GET /api/v1/admin/ai-config/{provider}
+Получение конфигурации AI провайдера по имени.
+
+**Parameters:**
+- provider: "openai" или "anthropic"
+
+**Response:**
+```json
+{
+  "id": "config_uuid",
+  "provider": "openai",
+  "is_active": true,
+  "created_at": "2024-01-16T00:00:00Z",
+  "updated_at": "2024-01-16T00:00:00Z",
+  "api_key_masked": "***abcd"
+}
+```
+
+### POST /api/v1/admin/ai-config
+Создание новой конфигурации AI провайдера.
+
+**Request Body:**
+```json
+{
+  "provider": "openai",
+  "api_key": "sk-your-api-key-here",
+  "config": "{\"model\": \"gpt-4-turbo-preview\"}",
+  "is_active": true
+}
+```
+
+**Response:**
+```json
+{
+  "id": "config_uuid",
+  "provider": "openai",
+  "is_active": true,
+  "created_at": "2024-01-16T00:00:00Z",
+  "updated_at": "2024-01-16T00:00:00Z",
+  "api_key_masked": "***abcd"
+}
+```
+
+### PUT /api/v1/admin/ai-config/{provider}
+Обновление конфигурации AI провайдера.
+
+**Request Body (все поля опциональны):**
+```json
+{
+  "provider": "openai",
+  "api_key": "sk-new-api-key",
+  "config": "{\"model\": \"gpt-4\"}",
+  "is_active": false
+}
+```
+
+### DELETE /api/v1/admin/ai-config/{provider}
+Удаление конфигурации AI провайдера.
+
+**Response:** 204 No Content
+

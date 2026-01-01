@@ -40,13 +40,30 @@ async def get_current_user(
     return await auth_service.get_current_user(user_id)
 
 
+@router.get("/setup-status")
+async def get_setup_status(
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+):
+    """Check if system needs initial admin setup."""
+    user_count = await user_repo.count()
+    return {
+        "needs_setup": user_count == 0,
+        "user_count": user_count,
+    }
+
+
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ):
-    """Register a new user."""
-    return await auth_service.register(user_data)
+    """Register a new user. First user automatically becomes superuser."""
+    # Check if this is the first user
+    user_count = await user_repo.count()
+    is_first_user = user_count == 0
+    
+    return await auth_service.register(user_data, is_superuser=is_first_user)
 
 
 @router.post("/login", response_model=Token)

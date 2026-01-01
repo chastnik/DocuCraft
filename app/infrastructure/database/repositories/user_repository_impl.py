@@ -26,12 +26,13 @@ class UserRepositoryImpl(UserRepository):
         result = await self.session.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
 
-    async def create(self, user_data: UserCreate, hashed_password: str) -> User:
+    async def create(self, user_data: UserCreate, hashed_password: str, is_superuser: bool = False) -> User:
         """Create user."""
         user = User(
             email=user_data.email,
             username=user_data.username,
             hashed_password=hashed_password,
+            is_superuser=is_superuser,
         )
         self.session.add(user)
         await self.session.commit()
@@ -64,4 +65,10 @@ class UserRepositoryImpl(UserRepository):
         await self.session.delete(user)
         await self.session.commit()
         return True
+
+    async def count(self) -> int:
+        """Count total number of users."""
+        from sqlalchemy import func
+        result = await self.session.execute(select(func.count(User.id)))
+        return result.scalar() or 0
 

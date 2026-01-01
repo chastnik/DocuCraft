@@ -15,8 +15,14 @@ class AuthService:
         """Initialize auth service."""
         self.user_repository = user_repository
 
-    async def register(self, user_data: UserCreate) -> User:
-        """Register a new user."""
+    async def register(self, user_data: UserCreate, is_superuser: bool = False) -> User:
+        """Register a new user.
+        
+        Args:
+            user_data: User creation data
+            is_superuser: If True, create user as superuser. 
+                         If False and no users exist, first user becomes superuser.
+        """
         # Check if user with email exists
         existing_user = await self.user_repository.get_by_email(user_data.email)
         if existing_user:
@@ -30,8 +36,14 @@ class AuthService:
         # Hash password
         hashed_password = get_password_hash(user_data.password)
 
-        # Create user
-        user = await self.user_repository.create(user_data, hashed_password)
+        # If no users exist, first user becomes superuser
+        if not is_superuser:
+            user_count = await self.user_repository.count()
+            if user_count == 0:
+                is_superuser = True
+
+        # Create user with superuser flag
+        user = await self.user_repository.create(user_data, hashed_password, is_superuser=is_superuser)
         return User.model_validate(user)
 
     async def login(self, login_data: UserLogin) -> tuple[User, str]:

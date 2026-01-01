@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     ai_provider: str = "openai"  # openai or anthropic
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # Accept both string (comma-separated) and list formats
+    cors_origins: str | List[str] = "http://localhost:3000,http://localhost:5173"
 
     # File Storage
     storage_type: str = "local"  # local or s3
@@ -55,10 +56,17 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        """Parse CORS origins from comma-separated string."""
+        """Parse CORS origins from comma-separated string or list."""
         if isinstance(self.cors_origins, str):
-            return [origin.strip() for origin in self.cors_origins.split(",")]
-        return self.cors_origins
+            # Handle empty string
+            if not self.cors_origins.strip():
+                return ["http://localhost:3000", "http://localhost:5173"]
+            return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        elif isinstance(self.cors_origins, list):
+            return self.cors_origins
+        else:
+            # Fallback to default
+            return ["http://localhost:3000", "http://localhost:5173"]
 
 
 settings = Settings()

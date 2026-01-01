@@ -42,10 +42,10 @@ async def get_git_service(
 async def github_webhook(
     project_id: str,
     request: Request,
-    x_github_event: Annotated[str | None, Header(alias="X-GitHub-Event")] = None,
-    x_hub_signature_256: Annotated[str | None, Header(alias="X-Hub-Signature-256")] = None,
     db: Annotated[AsyncSession, Depends(get_db)],
     project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
+    x_github_event: Annotated[str | None, Header(alias="X-GitHub-Event")] = None,
+    x_hub_signature_256: Annotated[str | None, Header(alias="X-Hub-Signature-256")] = None,
 ):
     """Handle GitHub webhook events."""
     # Get project
@@ -97,8 +97,8 @@ async def github_webhook(
 async def analyze_commit(
     project_id: str,
     commit_hash: str,
-    current_user: Annotated[User, Depends(get_current_user)] = None,
-    git_service: Annotated[GitService, Depends(get_git_service)] = None,
+    current_user: Annotated[User, Depends(get_current_user)],
+    git_service: Annotated[GitService, Depends(get_git_service)],
 ):
     """Analyze a specific commit."""
     # TODO: Get user's GitHub access token from database
@@ -113,9 +113,9 @@ async def analyze_commit(
 @router.get("/projects/{project_id}/commits")
 async def list_commits(
     project_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
     branch: str = "main",
-    current_user: Annotated[User, Depends(get_current_user)] = None,
-    project_repo: Annotated[ProjectRepository, Depends(get_project_repository)] = None,
 ):
     """List recent commits for a project."""
     project = await project_repo.get_by_id(project_id)

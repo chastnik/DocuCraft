@@ -9,11 +9,12 @@ from app.core.config import settings
 class OpenAIProvider(AIProvider):
     """OpenAI provider implementation."""
 
-    def __init__(self):
+    def __init__(self, api_key: str | None = None):
         """Initialize OpenAI provider."""
-        if not settings.openai_api_key:
+        api_key = api_key or settings.openai_api_key
+        if not api_key:
             raise ValueError("OpenAI API key not configured")
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+        self.client = AsyncOpenAI(api_key=api_key)
         self.model = "gpt-4-turbo-preview"
 
     async def analyze_code_changes(

@@ -63,4 +63,7 @@ alembic/versions/*.pyc
 .DS_Store
 Thumbs.db
 
+# Process IDs
+*.pid
+
 .env
